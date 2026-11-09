@@ -1,0 +1,1037 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sanctuary Camera Trainer</title>
+<meta name="description" content="PTZ camera practice for Whitesburg Baptist Church camera volunteers.">
+<meta name="theme-color" content="#0d1014">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cam Trainer">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Caveat+Brush&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+/* Layout: a control-room bay — program monitor left, operator panel right, director's call strip under the monitor */
+:root{
+  --bg:#0d1014; --panel:#151a20; --raise:#1c222a; --line:#29313b; --fg:#e6e9ed; --muted:#8a94a1;
+  --amber:#e9a23b; --tally:#ff3b30; --pvw:#2fcf6d;
+  --f-disp:"Barlow Condensed","Arial Narrow",sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 32px}
+.wrap{max-width:1360px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+h1{font-family:var(--f-disp);font-weight:700;font-size:28px;letter-spacing:.02em;margin:0;line-height:1;text-transform:uppercase}
+.sub{color:var(--muted);font-size:13px;margin-top:4px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.btn{font:600 13px/1 var(--f-disp);letter-spacing:.08em;text-transform:uppercase;color:var(--fg);background:var(--raise);
+  border:1px solid var(--line);border-radius:6px;padding:9px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{border-color:#3a4450}
+a.btn{text-decoration:none;justify-content:center}
+.btn:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.btn[aria-pressed="true"]{background:#2a2216;border-color:var(--amber);color:#ffd28a}
+.btn .led{width:7px;height:7px;border-radius:50%;background:#3a424c}
+.btn[aria-pressed="true"] .led{background:var(--amber);box-shadow:0 0 6px var(--amber)}
+.btn small{font:500 11px var(--f-body);letter-spacing:0;text-transform:none;color:var(--muted)}
+.btn.primary{background:var(--amber);color:#1b1206;border-color:var(--amber)}
+.btn.primary.stop{background:#3a1715;color:#ffb3ad;border-color:#7a2a24}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+@media (max-width:960px){.grid{grid-template-columns:minmax(0,1fr)}}
+.stagecol{display:flex;flex-direction:column;gap:10px;min-width:0}
+.monitor{position:relative;width:100%;max-width:100%;aspect-ratio:16/9;background:#000;border:1px solid var(--line);border-radius:4px;overflow:hidden;touch-action:none;cursor:crosshair;user-select:none;-webkit-user-select:none}
+.monitor canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hud{position:absolute;inset:0;pointer-events:none;font:500 12px/1 var(--f-mono);color:#f2f4f6;text-shadow:0 1px 2px rgba(0,0,0,.9)}
+.hud>*{position:absolute}
+.tally{top:10px;left:10px;display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.55);padding:6px 9px;border-radius:3px;border:1px solid rgba(255,255,255,.12)}
+.tally .dot{width:9px;height:9px;border-radius:50%;background:#555}
+.tally[data-s="pgm"]{background:rgba(160,20,14,.8);border-color:var(--tally)}
+.tally[data-s="pgm"] .dot{background:var(--tally);box-shadow:0 0 8px var(--tally)}
+.tally[data-s="pvw"] .dot{background:var(--pvw);box-shadow:0 0 8px var(--pvw)}
+.tally[data-s="pvw"]{border-color:rgba(47,207,109,.6)}
+.ro{background:rgba(0,0,0,.45);padding:5px 8px;border-radius:3px}
+.tr{top:10px;right:10px}.bl{bottom:10px;left:10px}.br{bottom:10px;right:10px}
+.meter{left:50%;bottom:10px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.5);padding:5px 9px;border-radius:3px}
+.mbar{width:110px;height:6px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden}
+.mbar i{display:block;height:100%;width:0;background:var(--amber);transition:width .1s linear}
+.mbar i.ok{background:var(--pvw)}
+@media (max-width:620px){.hud{font-size:10px}.mbar{width:60px}.meter .ml{display:none}.bl{display:none}}
+.hint{top:10px;left:50%;transform:translateX(-50%);font:600 15px/1.2 var(--f-disp);letter-spacing:.04em;text-transform:uppercase;background:rgba(40,26,6,.78);border:1px solid var(--amber);color:#ffd28a;padding:6px 10px;border-radius:3px;white-space:nowrap;max-width:60%;overflow:hidden;text-overflow:ellipsis}
+.hint.ok{background:rgba(8,40,20,.78);border-color:var(--pvw);color:#9ff0bf}
+@media (max-width:620px){.hint{font-size:11px;top:auto;bottom:34px;max-width:90%}}
+.rules{margin:10px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:13.5px;color:#c3cad3}
+.rules b{color:var(--fg)}
+.flash{position:absolute;inset:0;border:4px solid var(--tally);opacity:0;pointer-events:none;transition:opacity .2s}
+.flash.on{opacity:1}
+.callbar{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;min-height:62px;flex-wrap:wrap}
+.callbar .tag{font:700 12px var(--f-disp);letter-spacing:.14em;color:var(--muted);text-transform:uppercase;border:1px solid var(--line);padding:5px 7px;border-radius:4px}
+.callbar .txt{flex:1 1 260px;min-width:0;font:600 21px/1.2 var(--f-disp);letter-spacing:.01em;text-wrap:balance}
+.chip{font:500 12px var(--f-mono);padding:6px 9px;border-radius:4px;background:var(--raise);border:1px solid var(--line);display:flex;align-items:center;gap:8px;white-space:nowrap}
+.chip .hold{width:46px;height:4px;background:rgba(255,255,255,.12);border-radius:2px;overflow:hidden}
+.chip .hold i{display:block;height:100%;width:0;background:var(--pvw)}
+.chip.take{background:#5a120e;border-color:var(--tally);color:#fff}
+.touchpad{display:none;justify-content:space-between;align-items:center;gap:16px;padding:6px 4px}
+@media (hover:none) and (pointer:coarse){.touchpad{display:flex}}
+.stick{position:relative;width:136px;height:136px;border-radius:50%;background:radial-gradient(circle,#1f262f 0,#141920 70%);border:1px solid var(--line);touch-action:none}
+.stick .knob{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:#2c343f;border:2px solid #49535f;box-shadow:0 4px 10px rgba(0,0,0,.5)}
+.rocker{position:relative;width:64px;height:150px;border-radius:32px;background:#141920;border:1px solid var(--line);touch-action:none}
+.rocker .knob{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:#2c343f;border:2px solid #49535f}
+.rocker span{position:absolute;left:0;right:0;text-align:center;font:700 12px var(--f-disp);color:var(--muted);letter-spacing:.1em}
+.rocker .t{top:8px}.rocker .w{bottom:8px}
+.padlabel{font:600 11px var(--f-disp);letter-spacing:.12em;color:var(--muted);text-transform:uppercase;text-align:center;margin-top:6px}
+aside.panel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.block{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.label{font:700 12px var(--f-disp);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.desc{margin:0;color:#c3cad3;font-size:14px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.row label{font-size:14px}
+select,input[type=range]{accent-color:var(--amber)}
+select{font:500 14px var(--f-body);background:var(--raise);color:var(--fg);border:1px solid var(--line);border-radius:5px;padding:6px 8px;min-width:0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.two select{width:100%}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--raise);border-radius:5px;padding:8px 10px}
+.stat b{display:block;font:500 20px var(--f-mono);font-variant-numeric:tabular-nums}
+.stat span{font:600 11px var(--f-disp);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+th{font:600 11px var(--f-disp);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:left;padding:4px 4px;border-bottom:1px solid var(--line)}
+td{padding:5px 4px;border-bottom:1px solid #1f252d}
+td.n,th.n{text-align:right;font-family:var(--f-mono)}
+.note{font-size:12.5px;color:var(--muted);margin:0}
+details summary{cursor:pointer;list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary .label::after{content:" +"}
+details[open] summary .label::after{content:" −"}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13.5px;margin-top:10px}
+.keys kbd{font:500 12px var(--f-mono);background:var(--raise);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:2px 6px;white-space:nowrap}
+[hidden]{display:none!important}
+.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:13.5px;color:#c3cad3}
+.steps b{color:var(--fg)}
+textarea{width:100%;box-sizing:border-box;font:400 14px/1.4 var(--f-body);background:var(--raise);color:var(--fg);border:1px solid var(--line);border-radius:5px;padding:8px;resize:vertical;min-height:84px}
+textarea:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
+#fbForm{display:flex;flex-direction:column;gap:8px}
+.rate{display:flex;gap:4px}
+.rate .btn{padding:7px 9px;min-width:32px;justify-content:center}
+.status{min-height:0;margin:0;font-size:13px;color:#9ff0bf}
+.status.warn{color:#ffd28a}
+.board td.me{color:#ffd28a;font-weight:600}
+.board .who{display:flex;align-items:center;gap:8px;min-width:0}
+.board .who img{width:20px;height:20px;border-radius:50%;flex:none}
+.board .who span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fb{border-top:1px solid #1f252d;padding-top:10px;display:flex;flex-direction:column;gap:4px}
+.fb:first-child{border-top:0;padding-top:0}
+.fb .meta{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px}
+.fb .meta b{color:var(--fg);font-weight:600}
+.fb .txt{font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.fb .ctx{font:400 11.5px var(--f-mono);color:var(--muted)}
+#inbox{display:flex;flex-direction:column;gap:10px;max-height:460px;overflow:auto}
+.err{padding:30px;color:#ffb3ad;font-family:var(--f-mono)}
+@media (prefers-reduced-motion:reduce){.mbar i,.flash{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Sanctuary Camera Trainer</h1>
+      <div class="sub">PTZ practice in a virtual Whitesburg worship center · pan, tilt and zoom like the real head</div>
+    </div>
+    <div class="seg"><div class="seg" id="camSeg" role="group" aria-label="Camera position"></div><button class="btn" id="fsBtn">Full screen</button></div>
+  </header>
+
+  <div class="grid">
+    <section class="stagecol">
+      <div class="monitor" id="monitor">
+        <canvas id="gl"></canvas>
+        <canvas id="ov"></canvas>
+        <div class="flash" id="flash"></div>
+        <div class="hud">
+          <div class="tally" id="tally" data-s="iso"><span class="dot"></span><b id="tallyCam">CAM 1</b><span id="tallyState">ISO</span></div>
+          <div class="ro tr" id="roZoom">ZOOM 1.0×</div>
+          <div class="ro bl" id="roPT">PAN 0.0°  TILT 0.0°</div>
+          <div class="meter" id="meter"><span class="ml">FRAMING</span><div class="mbar"><i id="meterFill"></i></div><span id="meterVal">—</span></div>
+          <div class="ro br" id="roTime" hidden></div>
+          <div class="hint" id="hint" hidden></div>
+        </div>
+      </div>
+
+      <div class="touchpad" aria-label="Touch controls">
+        <div><div class="stick" id="stick"><div class="knob"></div></div><div class="padlabel">Pan / Tilt</div></div>
+        <div><div class="rocker" id="rocker"><span class="t">T</span><span class="w">W</span><div class="knob"></div></div><div class="padlabel">Zoom</div></div>
+      </div>
+
+      <div class="callbar">
+        <span class="tag" id="callTag">Practice</span>
+        <div class="txt" id="callTxt">Drag in the monitor to move the camera. Scroll to zoom.</div>
+        <div class="chip" id="callChip" hidden></div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="block">
+        <div class="label">Drill</div>
+        <div class="seg" id="modeSeg" role="group" aria-label="Drill mode">
+          <button class="btn" data-mode="free" aria-pressed="true"><span class="led"></span>Free</button>
+          <button class="btn" data-mode="calls" aria-pressed="false"><span class="led"></span>Director calls</button>
+          <button class="btn" data-mode="tracking" aria-pressed="false"><span class="led"></span>Tracking</button>
+        </div>
+        <p class="desc" id="modeDesc"></p>
+        <div id="freeOpts" class="two">
+          <select id="subjSel" aria-label="Subject"></select>
+          <select id="sizeSel" aria-label="Shot size"></select>
+        </div>
+        <button class="btn primary" id="startBtn" hidden>Start round</button>
+        <div class="stats" id="stats" hidden></div>
+        <div id="results"></div>
+      </div>
+
+      <div class="block" id="volBlock">
+        <div class="label">Volunteer testing</div>
+        <ol class="steps">
+          <li>Practice in <b>Free</b> mode from each camera.</li>
+          <li>Run a <b>Director calls</b> round and a <b>Tracking</b> round. Your best scores are saved on this device.</li>
+          <li>Send feedback on what felt wrong or what to add.</li>
+        </ol>
+        <a class="btn primary" id="fbLink" href="#" target="_blank" rel="noopener">Send feedback</a>
+        <p class="note" id="fbHint">Mention which camera and drill you were on.</p>
+        <p class="status" id="appStatus" role="status"></p>
+      </div>
+
+      <div class="block" id="boardBlock">
+        <div class="row"><div class="label">Your best scores</div><button class="btn" id="resetScores" type="button">Reset</button></div>
+        <div id="board" class="board"></div>
+      </div>
+
+      <div class="block" id="presetBlock">
+        <div class="row"><div class="label">Presets</div><span class="note" id="presetNote">Per camera</span></div>
+        <div class="seg" id="presetSeg">
+          <button class="btn" id="homeBtn">Home</button>
+          <button class="btn" data-p="0">P1</button><button class="btn" data-p="1">P2</button>
+          <button class="btn" data-p="2">P3</button><button class="btn" data-p="3">P4</button>
+          <button class="btn" id="storeBtn" aria-pressed="false"><span class="led"></span>Store</button>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="label">Head settings</div>
+        <div class="row"><label for="speed">Max speed</label><input type="range" id="speed" min="15" max="100" value="60" style="flex:1;max-width:170px"></div>
+        <div class="row"><label for="resp">Ramp (ease in/out)</label>
+          <select id="resp"><option value="smooth">Smooth</option><option value="standard" selected>Standard</option><option value="snappy">Snappy</option></select></div>
+        <div class="row"><label for="zscale">Slow pan when zoomed in</label><input type="checkbox" id="zscale" checked></div>
+        <div class="row"><label for="wheelzoom">Mouse scroll wheel zooms</label><input type="checkbox" id="wheelzoom"></div>
+        <div class="row"><label for="inv">Invert tilt</label><input type="checkbox" id="inv"></div>
+        <div class="row"><label for="grid">Rule-of-thirds grid</label><input type="checkbox" id="grid" checked></div>
+        <div class="row"><label for="guide">Show target framing box</label><input type="checkbox" id="guide" checked></div>
+        <div class="row"><label for="coach">Coaching hints</label><input type="checkbox" id="coach" checked></div>
+        <div class="row"><label for="walk">Pastor walks (Free mode)</label><input type="checkbox" id="walk" checked></div>
+        <div class="row"><label for="pspeed">Pastor walk speed <span class="note" id="pspeedVal">100%</span></label><input type="range" id="pspeed" min="25" max="200" step="5" value="100" style="flex:1;max-width:170px"></div>
+      </div>
+
+      <details class="block" open>
+        <summary><span class="label">Framing rules</span></summary>
+        <ul class="rules">
+          <li><b>Headroom.</b> Keep it tight: just a small gap above the head, with the eyes in the top third of the frame. In a close-up it is fine to trim the top of the head slightly. Too much space above the head makes the subject look like they are sinking.</li>
+          <li><b>Look room.</b> When someone looks to one side, place them on the opposite third so there is open space in front of their face.</li>
+          <li><b>Walking room.</b> When the subject moves, keep extra space ahead of them. Lead the move instead of chasing it.</li>
+          <li><b>Facing the camera.</b> Center them, with the eyes still on the upper third.</li>
+          <li><b>Cowboy shot.</b> Cut at mid-thigh, never at the knees or the waist. It shows posture and gestures and works well for a pastor who moves around.</li>
+          <li><b>Full shots.</b> Leave a little room above the head and below the feet.</li>
+        </ul>
+      </details>
+
+      <details class="block">
+        <summary><span class="label">Controls</span></summary>
+        <div class="keys">
+          <kbd>Click</kbd><span>in the monitor to grab the joystick, then move the mouse. No button holding. Farther from where you clicked = faster; back to the dot = stop. Click again or press Esc to let go.</span>
+          <kbd>Scroll</kbd><span>zoom in / out, if “Mouse scroll wheel zooms” is on</span>
+          <kbd>W A S D</kbd><span>or arrow keys to pan and tilt</span>
+          <kbd>I / O</kbd><span>zoom in / out (E / Q and <kbd>=</kbd> <kbd>−</kbd> also work)</span>
+          <kbd>Shift</kbd><span>hold for fine, slow moves</span>
+          <kbd>1 2 3</kbd><span>switch camera position</span>
+          <kbd>Gamepad</kbd><span>left stick pan/tilt, triggers or right stick zoom</span>
+          <kbd>Touch</kbd><span>joystick and zoom rocker below the monitor</span>
+        </div>
+      </details>
+    </aside>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+const T = window.THREE;
+const $ = s => document.querySelector(s);
+const mon = $('#monitor');
+if (!T) { mon.innerHTML = '<div class="err">The 3D engine did not load. Check your connection and reload.</div>'; return; }
+
+const D2R = Math.PI/180, R2D = 180/Math.PI;
+const FMAX = 45, ZMAX = Math.log(20), TANMAX = Math.tan(FMAX*D2R/2);
+const fovOf = z => 2*Math.atan(TANMAX/Math.exp(z))*R2D;
+const wrap = a => { a = (a + Math.PI) % (2*Math.PI); if (a < 0) a += 2*Math.PI; return a - Math.PI; };
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const rand = (a,b) => a + Math.random()*(b-a);
+
+/* ---------- renderer ---------- */
+let renderer;
+try { renderer = new T.WebGLRenderer({canvas: $('#gl'), antialias: true}); }
+catch(e){ mon.innerHTML = '<div class="err">WebGL is not available in this browser.</div>'; return; }
+const scene = new T.Scene();
+scene.background = new T.Color(0x090a0d);
+scene.fog = new T.Fog(0x090a0d, 70, 120);
+const cam = new T.PerspectiveCamera(FMAX, 16/9, 0.1, 200);
+cam.rotation.order = 'YXZ';
+
+const M = (c, o) => new T.MeshStandardMaterial(Object.assign({color:c, roughness:.85, metalness:0}, o||{}));
+function box(w,h,d,mat,x,y,z,parent){ const m = new T.Mesh(new T.BoxGeometry(w,h,d), mat); m.position.set(x,y,z); (parent||scene).add(m); return m; }
+function cyl(rt,rb,h,mat,x,y,z,seg){ const m = new T.Mesh(new T.CylinderGeometry(rt,rb,h,seg||14), mat); m.position.set(x,y,z); scene.add(m); return m; }
+
+/* ---------- helpers ---------- */
+function canvasTex(w,h,draw){ const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new T.CanvasTexture(c); t.anisotropy = 4; return t; }
+const glowMat = (c,o) => new T.MeshBasicMaterial({color:c, transparent:true, opacity:o, blending:T.AdditiveBlending, depthWrite:false, side:T.DoubleSide});
+function beam(from, to, color, op, r0, r1){
+  const a = new T.Vector3(...from), b = new T.Vector3(...to), dir = b.clone().sub(a), len = dir.length();
+  const m = new T.Mesh(new T.CylinderGeometry(r0, r1, len, 20, 1, true), glowMat(color, op));
+  m.position.copy(a.clone().add(dir.clone().multiplyScalar(.5)));
+  m.quaternion.setFromUnitVectors(new T.Vector3(0,-1,0), dir.normalize()); scene.add(m); return m;
+}
+const dummy = new T.Object3D();
+
+/* ---------- worship center, modeled on the Whitesburg stage ---------- */
+const black = M(0x0d0e10,{roughness:.45}), metal = M(0x8a8f96,{metalness:.8,roughness:.35}), gold = M(0xc9a24a,{metalness:.9,roughness:.3});
+const wallDark = M(0x21252b), charcoal = M(0x16181c), woodL = M(0x9c6c44,{roughness:.55}), woodD = M(0x33261c,{roughness:.7}), deck = M(0x1c2534,{roughness:.55});
+const trussMat = M(0x6c7178,{metalness:.7,roughness:.4});
+const neon = new T.MeshBasicMaterial({color:0x3f6dff}), neonCore = new T.MeshBasicMaterial({color:0xc9d6ff});
+
+// shell: gray patterned carpet, dark walls and ceiling
+const carpetTex = canvasTex(256,256,(x,w,h)=>{ x.fillStyle='#50555d'; x.fillRect(0,0,w,h);
+  for (let i=0;i<1400;i++){ x.fillStyle = Math.random()<.5 ? 'rgba(25,28,34,'+(Math.random()*.4)+')' : 'rgba(150,156,164,'+(Math.random()*.3)+')'; x.fillRect(Math.random()*w, Math.random()*h, rand(2,12), rand(1,3)); } });
+carpetTex.wrapS = carpetTex.wrapT = T.RepeatWrapping; carpetTex.repeat.set(12,12);
+box(48,.1,52, M(0xffffff,{map:carpetTex}), 0,-.05,9);
+box(.3,16,52, wallDark, -24,8,9); box(.3,16,52, wallDark, 24,8,9);
+box(48,16,.3, wallDark, 0,8,34.5);
+box(48,.3,52, charcoal, 0,16,9);
+box(22.4,16,.3, wallDark, 0,8,-15.3);
+for (let x=-18;x<=18;x+=6) for (let z=-4;z<=28;z+=8) box(.8,.05,.8, M(0x3a3e45), x,15.84,z);
+// balcony
+box(48,.4,7.5, M(0x24272c), 0,6.2,30.75);
+box(48,1.0,.15, woodD, 0,6.9,27.05);
+
+// angled side wings with blue neon crosses and LED bands
+function neonCross(parent, x, y, z){
+  const g = new T.Group(); g.position.set(x,y,z); parent.add(g);
+  const add = (w,h,d,mat,px,py,pz)=>{ const m=new T.Mesh(new T.BoxGeometry(w,h,d),mat); m.position.set(px,py,pz); g.add(m); };
+  add(.34,3.2,.06, neon, 0,0,0); add(2.0,.34,.06, neon, 0,.55,0);
+  add(.12,2.95,.08, neonCore, 0,0,.02); add(1.76,.12,.08, neonCore, 0,.55,.02);
+  const gm = glowMat(0x2d5bff,.2); add(1.0,3.9,.02, gm, 0,0,-.03); add(2.7,1.0,.02, gm, 0,.55,-.03);
+}
+for (const side of [-1,1]) {
+  const g = new T.Group(); g.position.set(side*17.5,0,-12.25); g.rotation.y = side*-.432; scene.add(g);
+  box(14.3,16,.3, wallDark, 0,8,0, g);
+  box(13.6,2.8,.12, woodD, 0,2.4,.2, g);
+  box(13.8,.6,.1, M(0x2b3038), 0,4.8,.22, g);
+  for (const yy of [4.35,5.25]) { box(13.8,.07,.05, neon, 0,yy,.3, g); box(13.8,.35,.02, glowMat(0x2d5bff,.15), 0,yy,.28, g); }
+  box(3.4,5.2,.08, M(0x1a1d22), side*-1.4,8.6,.2, g);
+  neonCross(g, side*-1.4, 8.6, .3);
+}
+// vertical blue strips flanking the screen wall
+for (const x of [-11.7,-10.9,10.9,11.7]) { box(.09,11,.06, neon, x,7.6,-15.1); box(.4,11,.02, glowMat(0x2d5bff,.14), x,7.6,-15.08); }
+
+// three LED screens with the Whitesburg welcome slides
+const scrCanvases = [0,1,2].map(()=>{ const c=document.createElement('canvas'); c.width=800; c.height=450; return c; });
+const scrTex = scrCanvases.map(c => new T.CanvasTexture(c));
+function paintScreens(){
+  scrCanvases.forEach((c,i)=>{ const x=c.getContext('2d'), w=c.width, h=c.height;
+    let g = x.createLinearGradient(0,0,w,h); g.addColorStop(0,'#137f95'); g.addColorStop(1,'#0a4560'); x.fillStyle=g; x.fillRect(0,0,w,h);
+    for (let k=0;k<30;k++){ x.fillStyle='rgba(255,255,255,'+(((k*37)%10)/220)+')'; x.beginPath(); x.arc((k*173)%w,(k*97)%h,30+(k*13)%70,0,7); x.fill(); }
+    x.fillStyle='rgba(130,210,225,.55)'; x.beginPath(); x.moveTo(0,h*.08); x.bezierCurveTo(w*.35,h*-.02,w*.7,h*.28,w,h*.06); x.lineTo(w,h*.22); x.bezierCurveTo(w*.6,h*.4,w*.3,h*.1,0,h*.26); x.fill();
+    x.fillStyle='#f3fafc'; x.beginPath(); x.moveTo(0,h*.2); x.bezierCurveTo(w*.3,h*.06,w*.65,h*.4,w,h*.18); x.lineTo(w,h*.86); x.bezierCurveTo(w*.6,h*1.02,w*.3,h*.72,0,h*.9); x.fill();
+    x.fillStyle='#0f5f78'; x.textAlign='center'; x.textBaseline='middle';
+    const script = '"Caveat Brush","Brush Script MT",cursive';
+    if (i===1) { x.font='70px '+script; x.fillText('Welcome to', w/2, h*.38);
+      x.font='700 88px "Barlow Condensed","Arial Narrow",sans-serif'; x.fillText('WHITESBURG', w/2, h*.56);
+      x.font='600 46px "Barlow Condensed","Arial Narrow",sans-serif'; x.fillText('BAPTIST CHURCH', w/2, h*.71); }
+    else { const L = i===0 ? ['Encounter','Jesus'] : ['Experience','life change']; x.font='90px '+script; x.fillText(L[0], w*.47, h*.42); x.fillText(L[1], w*.55, h*.64); }
+    scrTex[i].needsUpdate = true; });
+}
+paintScreens();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(paintScreens);
+scrTex.forEach((t,i)=>{ const x = (i-1)*6.9;
+  box(6.36,3.62,.14, M(0x050505), x,7.75,-15.1);
+  const s = new T.Mesh(new T.PlaneGeometry(6.2,3.49), new T.MeshBasicMaterial({map:t})); s.position.set(x,7.75,-15.02); scene.add(s); });
+// fixture row above the screens with cyan shafts
+for (let x=-10.5;x<=10.6;x+=1.5) { cyl(.13,.16,.3, black, x,10.5,-14.6,10); const l = cyl(.11,.11,.02, new T.MeshBasicMaterial({color:0xaee6ff}), x,10.34,-14.6,10); }
+for (const x of [-9,-6,-3,3,6,9]) beam([x,10.3,-14.6],[x*1.04,5.8,-13.6], 0x5fd0ff, .045, .08, .55);
+
+// choir loft: curved tiers of teal seats behind a frosted glass rail
+const CC = {x:0, z:14}, A = .5, NSEG = 26;
+const arcPt = (r,a) => [CC.x + r*Math.sin(a), CC.z - r*Math.cos(a)];
+const ROWS = [0,1,2,3,4,5].map(i=>({r:22.0+i*.95, y:1.45+i*.45, d:i?0.95:1.0}));
+const riserMat = M(0x262b33), riserTop = M(0x2f3a46,{roughness:.9});
+ROWS.forEach(row=>{ for (let s=0;s<NSEG;s++){ const a = -A + (s+.5)*(2*A/NSEG), [x,z] = arcPt(row.r,a);
+  const b = box(row.r*(2*A/NSEG)*1.03, row.y, row.d, riserMat, x,row.y/2,z); b.rotation.y = -a;
+  const t = box(row.r*(2*A/NSEG)*1.03, .04, row.d, riserTop, x,row.y+.02,z); t.rotation.y = -a; } });
+const glass = M(0x9fd3e6,{transparent:true, opacity:.3, emissive:0x0d3d5c, roughness:.2, depthWrite:false});
+for (let s=0;s<NSEG;s++){ const a = -A + (s+.5)*(2*A/NSEG), [x,z] = arcPt(21.5,a), w = 21.5*(2*A/NSEG);
+  const p = box(w*.98,1.45,.05, glass, x,1.725,z); p.rotation.y = -a;
+  const cap = box(w*1.01,.06,.12, M(0x2a2f37), x,2.47,z); cap.rotation.y = -a;
+  const led = box(w*1.01,.05,.06, new T.MeshBasicMaterial({color:0x58c6ff}), x,1.03,z+.02); led.rotation.y = -a; }
+const backR = ROWS[5].r + .7;
+for (let s=0;s<NSEG;s++){ const a = -A + (s+.5)*(2*A/NSEG), [x,z] = arcPt(backR,a), w = backR*(2*A/NSEG)*1.03;
+  const f = box(w,5.3,.2, M(0x1e2329), x,2.65,z); f.rotation.y = -a;
+  const band = box(w,.5,.05, new T.MeshBasicMaterial({color:0x3fb6ff}), x,5.45,z+.12*Math.cos(a)); band.rotation.y = -a; }
+const chairTeal = M(0x2a8f9f,{roughness:.8});
+const choirSeats = []; ROWS.forEach((row,ri)=>{ const n = Math.floor(2*A*row.r/.62); for (let k=0;k<n;k++){ choirSeats.push({ri, r:row.r, y:row.y, a:-A+(k+.5)*(2*A/n)}); } });
+const csSeat = new T.InstancedMesh(new T.BoxGeometry(.5,.1,.45), chairTeal, choirSeats.length);
+const csBack = new T.InstancedMesh(new T.BoxGeometry(.5,.55,.08), chairTeal, choirSeats.length);
+choirSeats.forEach((c,i)=>{ const [x,z] = arcPt(c.r+.05,c.a);
+  dummy.position.set(x,c.y+.45,z); dummy.rotation.set(0,-c.a,0); dummy.updateMatrix(); csSeat.setMatrixAt(i,dummy.matrix);
+  dummy.translateZ(-.25); dummy.position.y = c.y+.75; dummy.updateMatrix(); csBack.setMatrixAt(i,dummy.matrix); });
+scene.add(csSeat, csBack);
+
+// stage deck, fascia, center thrust and stairs
+box(32,1,7.5, deck, 0,.5,-3.75);
+box(32.02,1,.08, woodD, 0,.5,.02);
+for (let x=-14.5;x<=14.6;x+=2.6) if (Math.abs(x)>6.8) box(2.1,.55,.04, woodL, x,.5,.07);
+for (const s of [-1,1]) box(9.4,.38,.7, woodD, s*11.3,.19,.38);
+box(6.4,1,1.4, deck, 0,.5,.7);
+box(6.42,1,.06, M(0x121418), 0,.5,1.41);
+for (const s of [-1,1]) for (let k=0;k<3;k++) box(3,(k+1)*.333,.46, woodD, s*4.9,(k+1)*.333/2, 1.15-k*.46);
+// acrylic pulpit
+const acrylic = M(0xd6ecff,{transparent:true, opacity:.22, roughness:.1, metalness:.1, depthWrite:false});
+box(.85,1.2,.5, acrylic, 0,1.6,-.1); box(.95,.05,.6, M(0xd6ecff,{transparent:true,opacity:.45}), 0,2.22,-.12);
+box(.7,.04,.04, new T.MeshBasicMaterial({color:0x7fd3ff}), 0,1.02,.16);
+// three wood consoles with blue LED faces
+const ledTex = canvasTex(256,64,(x,w,h)=>{ const g=x.createLinearGradient(0,0,w,0); g.addColorStop(0,'#3a52ff'); g.addColorStop(.5,'#8a6bff'); g.addColorStop(1,'#3a52ff'); x.fillStyle=g; x.fillRect(0,0,w,h); });
+function consoleUnit(x,z,ry){ const g = new T.Group(); g.position.set(x,1,z); g.rotation.y = ry; scene.add(g);
+  box(2.8,1.1,.75, woodD, 0,.55,0, g); box(2.95,.08,.85, woodL, 0,1.14,0, g);
+  for (const s of [-1,1]) box(.14,1.1,.8, woodL, s*1.4,.55,0, g);
+  const p = new T.Mesh(new T.PlaneGeometry(2.45,.62), new T.MeshBasicMaterial({map:ledTex})); p.position.set(0,.58,.38); g.add(p); }
+consoleUnit(-8.6,-1.9,.18); consoleUnit(-.3,-2.1,0); consoleUnit(8.6,-1.9,-.18);
+
+/* ---------- people ---------- */
+const skin = [0xe2b896,0xc68b62,0x8d5a3b,0x5a3825,0xf1cfb0,0xa86f48];
+const shirts = [0x2d3e5c,0x6b2a2a,0x3d5a3c,0xc9c3b6,0x1d1d22,0x7a5c3a,0x4f3a6b,0x9aa7b4,0x8c3f52];
+const hairs = [0x1a1410,0x3b2a1c,0x6b4a2a,0x9a9a9a,0xc8a060,0x111111];
+function person(o){
+  const g = new T.Group();
+  const mS = M(o.shirt), mP = M(o.pants||o.shirt), mK = M(o.skin,{roughness:.6}), mH = M(o.hair);
+  if (o.robe) {
+    const r = new T.Mesh(new T.CylinderGeometry(.2,.27,1.5,12), mS); r.position.y = .75; g.add(r);
+  } else {
+    if (!o.seated) for (const sx of [-.1,.1]) { const l = new T.Mesh(new T.CylinderGeometry(.078,.07,.86,8), mP); l.position.set(sx,.43,0); g.add(l); }
+    else for (const sx of [-.1,.1]) { const l = new T.Mesh(new T.CylinderGeometry(.078,.078,.45,8), mP); l.rotation.x = Math.PI/2; l.position.set(sx,.88,.2); g.add(l); }
+    const t = new T.Mesh(new T.CylinderGeometry(.21,.17,.64,14), mS); t.position.y = 1.17; g.add(t);
+    if (o.tie) { const tie = new T.Mesh(new T.BoxGeometry(.05,.34,.02), M(o.tie)); tie.position.set(0,1.28,.2); g.add(tie); }
+    for (const sx of [-.27,.27]) {
+      const a = new T.Mesh(new T.CylinderGeometry(.056,.05,.6,8), mS); a.position.set(sx,1.15,0); a.rotation.z = sx>0 ? .08 : -.08; g.add(a);
+      const h = new T.Mesh(new T.SphereGeometry(.05,8,6), mK); h.position.set(sx*1.07,.84,0); g.add(h);
+    }
+    const n = new T.Mesh(new T.CylinderGeometry(.05,.05,.1,8), mK); n.position.y = 1.53; g.add(n);
+    const ns = new T.Mesh(new T.SphereGeometry(.022,6,4), mK); ns.position.set(0,1.62,.118); g.add(ns);
+  }
+  const hd = new T.Mesh(new T.SphereGeometry(.115,16,12), mK); hd.scale.set(1,1.12,1); hd.position.y = 1.63; g.add(hd);
+  const hr = new T.Mesh(new T.SphereGeometry(.122,16,10,0,Math.PI*2,0,Math.PI*.52), mH); hr.position.set(0,1.66,-.015); hr.scale.set(1,1.1,1.06); g.add(hr);
+  g.position.set(o.x,o.y,o.z); scene.add(g); return g;
+}
+const pastor = person({x:0,y:1,z:-.65, shirt:0x22262e, pants:0x1b1e24, skin:0xd9a882, hair:0x4a3524, tie:0x2a5a8a});
+const leader = person({x:-4.6,y:1,z:-2.4, shirt:0x5d6b78, pants:0x23282f, skin:0xc68b62, hair:0x1a1410});
+const guitar = person({x:4.6,y:1,z:-2.6, shirt:0x7a3b2e, pants:0x2c3340, skin:0xf0cdb0, hair:0x8a6a3a});
+const keysP  = person({x:-1.3,y:.95,z:-4.2, shirt:0x2f3d33, pants:0x1f2228, skin:0x8d5a3b, hair:0x111111, seated:true});
+keysP.rotation.y = -Math.PI/2;
+const drums  = person({x:0,y:1.05,z:-6.6, shirt:0x3a3a44, pants:0x22252b, skin:0xe2b896, hair:0x3b2a1c, seated:true});
+// choir in the first three tiers
+choirSeats.forEach((c,i)=>{ if (c.ri>2 || (i*7)%10>5) return; const [x,z] = arcPt(c.r+.05,c.a);
+  const p = person({x, y:c.y, z, robe:true, shirt:0x1f2a48, skin:skin[i%skin.length], hair:hairs[(i*3)%hairs.length]}); p.rotation.y = -c.a; });
+
+/* ---------- instruments & orchestra ---------- */
+// worship leader mic, guitar
+cyl(.012,.012,1.55, metal, -4.6,1.78,-2.0,6);
+const mic = cyl(.02,.03,.16, black, -4.6,2.58,-2.1,8); mic.rotation.x = -1.1;
+box(.38,.46,.09, M(0x8a4a20,{roughness:.4}), 4.6,2.02,-2.36);
+const neck = box(.05,.72,.03, M(0x2a1c12), 4.82,2.4,-2.36); neck.rotation.z = -1.0;
+// grand piano, keyboard end toward stage right so the pianist plays in profile
+box(2.1,.32,1.5, M(0x070708,{roughness:.2,metalness:.2}), -2.75,1.82,-4.2);
+const lid = box(2.0,.03,1.4, M(0x070708,{roughness:.2}), -2.85,2.35,-4.55); lid.rotation.x = .7;
+box(.3,.08,1.3, M(0xeeeeea), -1.62,1.98,-4.2);
+for (const [x,z] of [[-1.85,-3.6],[-1.85,-4.8],[-3.6,-4.2]]) cyl(.05,.05,.66, black, x,1.33,z,8);
+box(.4,.5,.9, black, -1.15,1.25,-4.2);
+// drum booth: hexagonal clear shield with a roof on a round riser
+cyl(1.9,1.9,.5, M(0x1a1d22), 0,1.25,-6.2,24);
+const shield = new T.Mesh(new T.CylinderGeometry(1.6,1.6,1.7,6,1,true), M(0xd6ecff,{transparent:true,opacity:.16,roughness:.1,side:T.DoubleSide,depthWrite:false}));
+shield.position.set(0,2.35,-6.2); scene.add(shield);
+cyl(1.75,1.75,.1, M(0x1f232a), 0,3.95,-6.2,6);
+for (let k=0;k<6;k++){ const a=k*Math.PI/3; cyl(.03,.03,2.4, metal, Math.cos(a)*1.6,2.75,-6.2+Math.sin(a)*1.6,6); }
+const kick = cyl(.3,.3,.42, M(0x1e3f8a), 0,1.82,-5.75,18); kick.rotation.x = Math.PI/2;
+cyl(.18,.18,.16, M(0x1e3f8a), -.35,2.2,-5.95); cyl(.2,.2,.18, M(0x1e3f8a), .35,2.2,-5.95);
+cyl(.17,.17,.12, metal, -.5,2.05,-6.2);
+const cy1 = cyl(.26,.26,.012, gold, -.75,2.6,-5.8,20); cy1.rotation.x = .2;
+const cy2 = cyl(.3,.3,.012, gold, .8,2.65,-5.9,20); cy2.rotation.x = .25;
+cyl(.15,.15,.5, black, 0,1.75,-6.95,10);
+// timpani stage right
+for (const [x,z,r] of [[10.3,-4.6,.42],[11.3,-4.9,.38],[12.2,-4.4,.34],[11.6,-3.8,.3]]) {
+  cyl(r,r*.7,.55, M(0xb5683a,{metalness:.75,roughness:.35}), x,1.62,z,20);
+  cyl(r*1.02,r*1.02,.03, M(0xe8e2d6), x,1.9,z,20);
+  cyl(.03,.03,.4, metal, x,1.2,z,6);
+}
+// orchestra chairs and music stands
+const oChairs = [];
+for (const s of [-1,1]) for (let r=0;r<3;r++) for (let k=0;k<5;k++) { const x = s*(6.4+k*1.2+r*.3), z = -3.2-r*1.1; if (s>0 && x>9.6 && z>-5.4) continue; if (Math.abs(x)>13.5) continue; oChairs.push([x,z,s]); }
+const ocSeat = new T.InstancedMesh(new T.BoxGeometry(.45,.06,.45), black, oChairs.length);
+const ocBack = new T.InstancedMesh(new T.BoxGeometry(.45,.4,.05), black, oChairs.length);
+const ocStand = new T.InstancedMesh(new T.BoxGeometry(.5,.35,.02), black, oChairs.length);
+const ocPole = new T.InstancedMesh(new T.CylinderGeometry(.012,.012,1.0,5), metal, oChairs.length);
+oChairs.forEach(([x,z,s],i)=>{ const ry = -s*.35;
+  dummy.position.set(x,1.46,z); dummy.rotation.set(0,ry,0); dummy.updateMatrix(); ocSeat.setMatrixAt(i,dummy.matrix);
+  dummy.translateZ(-.22); dummy.position.y = 1.7; dummy.updateMatrix(); ocBack.setMatrixAt(i,dummy.matrix);
+  dummy.position.set(x,1.5,z); dummy.translateZ(.55); dummy.updateMatrix(); ocPole.setMatrixAt(i,dummy.matrix);
+  dummy.position.y = 2.05; dummy.rotation.set(-.4,ry,0); dummy.updateMatrix(); ocStand.setMatrixAt(i,dummy.matrix); });
+scene.add(ocSeat, ocBack, ocStand, ocPole);
+// floor wedges and uplights along the stage
+for (const x of [-12,-6,6,12]) { const w = box(.7,.35,.5, black, x,1.18,-.5); w.rotation.x = -.4; }
+for (const x of [-15,-10.5,10.5,15]) { cyl(.14,.16,.25, black, x,1.12,-.4,10); cyl(.12,.12,.02, new T.MeshBasicMaterial({color:0x6fa8ff}), x,1.25,-.4,10); }
+
+// side stairs climbing toward the upper wings
+for (const s of [-1,1]) {
+  const sx = s*17.6, sz = -1.5, dx = s*3.8, dz = -7.2, L = Math.hypot(dx,dz), ux = dx/L, uz = dz/L, ry = Math.atan2(ux,uz);
+  for (let i=0;i<14;i++) { const h = (i+1)*.4, b = box(2.4,h,.58, i%2?M(0x2a2e35):M(0x30353d), sx+ux*i*.58, h/2, sz+uz*i*.58); b.rotation.y = ry; }
+  const rail = box(.05,.05,L*1.08, M(0xd8dce2,{metalness:.6}), sx+ux*4.1-uz*1.25*s, 3.8, sz+uz*4.1+ux*1.25*s); rail.rotation.y = ry; rail.rotation.x = Math.atan2(5.6,8.1);
+}
+
+// audience: curved rows of theater chairs
+const audSeats = [];
+for (let r=8; r<=33; r+=1.0) { const n = Math.floor(1.3*r/.56); for (let k=0;k<n;k++){ const a = -.65+(k+.5)*(1.3/n);
+  if (Math.abs(Math.abs(a)-.22)<.03) continue;
+  const x = r*Math.sin(a), z = -4 + r*Math.cos(a);
+  if (Math.abs(x)>22.8 || z>29 || z<2.5) continue;
+  if (Math.hypot(Math.abs(x)-15,z-9.5)<1.8 || Math.hypot(x,z-20)<1.8) continue;
+  audSeats.push([x,z,a]); } }
+const seatMat = M(0x3a3d44,{roughness:.9});
+const asSeat = new T.InstancedMesh(new T.BoxGeometry(.5,.12,.48), seatMat, audSeats.length);
+const asBack = new T.InstancedMesh(new T.BoxGeometry(.52,.62,.1), seatMat, audSeats.length);
+const occ = audSeats.filter((_,i)=>(i*13)%10<4);
+const cBody = new T.InstancedMesh(new T.CylinderGeometry(.19,.22,.62,10), M(0xffffff), occ.length);
+const cHead = new T.InstancedMesh(new T.SphereGeometry(.115,12,10), M(0xffffff,{roughness:.6}), occ.length);
+const cHair = new T.InstancedMesh(new T.SphereGeometry(.12,12,8,0,Math.PI*2,0,Math.PI*.55), M(0xffffff), occ.length);
+audSeats.forEach(([x,z,a],i)=>{ dummy.position.set(x,.45,z); dummy.rotation.set(0,a+Math.PI,0); dummy.updateMatrix(); asSeat.setMatrixAt(i,dummy.matrix);
+  dummy.translateZ(-.24); dummy.position.y = .8; dummy.updateMatrix(); asBack.setMatrixAt(i,dummy.matrix); });
+const col = new T.Color();
+occ.forEach(([x,z],i)=>{ dummy.rotation.set(0,0,0);
+  dummy.position.set(x,.83,z); dummy.updateMatrix(); cBody.setMatrixAt(i,dummy.matrix); cBody.setColorAt(i,col.setHex(shirts[i%shirts.length]));
+  const hy = 1.28+rand(-.06,.06);
+  dummy.position.set(x,hy,z); dummy.updateMatrix(); cHead.setMatrixAt(i,dummy.matrix); cHead.setColorAt(i,col.setHex(skin[(i*7)%skin.length]));
+  dummy.position.set(x,hy+.025,z); dummy.updateMatrix(); cHair.setMatrixAt(i,dummy.matrix); cHair.setColorAt(i,col.setHex(hairs[(i*5)%hairs.length])); });
+scene.add(asSeat, asBack, cBody, cHead, cHair);
+// camera risers with tripods
+for (const [x,z] of [[-15,9.5],[0,20],[15,9.5]]) { box(2.0,1.0,2.0, M(0x1b1d21), x,.5,z); box(2.1,.05,2.1, M(0x2a2d33), x,1.02,z); cyl(.05,.05,1.6, black, x,1.85,z+.25,8); }
+
+/* ---------- rigging: truss, moving lights, line arrays ---------- */
+for (const [y,z] of [[11.2,-1.4],[12.6,3.0]]) {
+  box(27,.3,.3, trussMat, 0,y,z); box(27,.3,.3, trussMat, 0,y-.6,z);
+  for (let x=-13;x<=13;x+=1) { const d = box(.04,.68,.04, trussMat, x,y-.3,z); d.rotation.z = (x%2?.6:-.6); }
+  for (let x=-12;x<=12.1;x+=1.6) { cyl(.16,.2,.38, black, x,y-.85,z,10); cyl(.13,.13,.02, new T.MeshBasicMaterial({color:z<0?0x7fd0ff:0xfff1d6}), x,y-1.05,z,10); }
+  for (const x of [-13,13]) box(.06,16-y,.06, metal, x,(16+y)/2,z);
+}
+for (const s of [-1,1]) { for (let i=0;i<7;i++){ const b = box(1.15,.38,.8, black, s*12.8, 14.3-i*.4, 1.2+i*.07); b.rotation.x = i*.06; } box(.04,1.6,.04, metal, s*12.8,15.2,1.2); }
+box(1.0,3.4,.9, black, 0,12.4,1.6);
+box(.04,2.2,.04, metal, 0,15,1.6);
+box(.5,1.2,.4, black, -8.2,13.5,-.2); box(.5,1.2,.4, black, 8.2,13.5,-.2);
+
+/* ---------- lighting ---------- */
+scene.add(new T.HemisphereLight(0xc6d8ff, 0x10141c, .38));
+scene.add(new T.AmbientLight(0x8fa6ff, .07));
+function spot(color, inten, from, to, angle){ const s = new T.SpotLight(color, inten, 0, angle, .6, 1); s.position.set(...from); s.target.position.set(...to); scene.add(s); scene.add(s.target); }
+// warm front key for faces
+spot(0xffe6c4, 1.5, [0,12.2,3], [0,1.6,-.8], .5);
+spot(0xffe6c4, 1.1, [-6,12.2,3], [-4.6,1.6,-2.4], .4);
+spot(0xffe6c4, 1.1, [6,12.2,3], [4.6,1.6,-2.6], .4);
+spot(0xffe6c4, .8, [0,12.2,3], [-1,1.8,-5], .45);
+// blue stage wash and cyan choir loft
+spot(0x2f5dff, 1.5, [-8,10.6,-1.4], [-8,1,-4], .65);
+spot(0x2f5dff, 1.5, [8,10.6,-1.4], [8,1,-4], .65);
+spot(0x3f6bff, 1.0, [0,10.6,-1.4], [0,1,-5.5], .5);
+spot(0x3fd0ff, 1.5, [0,10.6,-1.4], [0,3,-11], .55);
+spot(0x3fd0ff, 1.1, [-9,10.6,-1.4], [-7,3,-9.5], .5);
+spot(0x3fd0ff, 1.1, [9,10.6,-1.4], [7,3,-9.5], .5);
+// house lights
+const house = new T.PointLight(0xffe7c8, .35, 40); house.position.set(0,13,14); scene.add(house);
+const house2 = new T.PointLight(0xffe7c8, .25, 30); house2.position.set(0,13,26); scene.add(house2);
+
+/* ---------- cameras ---------- */
+const CAMS = [
+  // lens height ~3 m: about 4 ft above a standing crowd (~1.75 m heads). Numbered left to right from the house.
+  {n:1, name:'House left', pos:new T.Vector3(-15,3.0,9.5), aim:new T.Vector3(0,2.8,-3)},
+  {n:2, name:'Center', pos:new T.Vector3(0,3.0,20), aim:new T.Vector3(0,3.0,-5)},
+  {n:3, name:'House right', pos:new T.Vector3(15,3.0,9.5), aim:new T.Vector3(0,2.8,-3)},
+];
+function aimAngles(pos, target){ const d = target.clone().sub(pos); return {yaw:Math.atan2(-d.x,-d.z), pitch:Math.atan2(d.y, Math.hypot(d.x,d.z))}; }
+const home = CAMS.map(c => Object.assign(aimAngles(c.pos,c.aim), {z:.15}));
+const camState = CAMS.map((c,i)=>({yaw:home[i].yaw, pitch:home[i].pitch, z:home[i].z, vp:0, vt:0, vz:0}));
+const presets = CAMS.map(()=>[null,null,null,null]);
+let ci = 0, anim = null;
+
+const camSeg = $('#camSeg');
+CAMS.forEach((c,i)=>{ const b=document.createElement('button'); b.className='btn'; b.dataset.cam=i; b.setAttribute('aria-pressed', i===0); b.innerHTML='<span class="led"></span>CAM '+c.n+' <small>'+c.name+'</small>'; b.onclick=()=>setCam(i); camSeg.appendChild(b); });
+function setCam(i){ ci=i; anim=null; if (typeof updateLeads==='function') updateLeads(0,true); camSeg.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed', +b.dataset.cam===i)); $('#tallyCam').textContent='CAM '+CAMS[i].n; refreshPresetBtns(); if (calls.active && calls.phase==='framing') $('#callTxt').textContent = callText(calls.cur); }
+
+/* ---------- subjects & shot sizes ---------- */
+const SIZES = {
+  CU:{c:1.60,h:.56,name:'Close-up',say:'a close-up'},
+  MCU:{c:1.45,h:.80,name:'Medium close-up',say:'a medium close-up'},
+  MS:{c:1.22,h:.98,name:'Medium shot (waist up)',say:'a medium shot'},
+  COWBOY:{c:1.1,h:1.3,name:'Cowboy (mid-thigh up)',say:'a cowboy shot'},
+  FS:{c:.95,h:2.05,name:'Full shot',say:'a full shot, head to toe,'},
+  WIDE:{name:'Wide'}
+};
+const SUBJ = {
+  pastor:{label:'Pastor', p:pastor, base:1},
+  leader:{label:'Worship leader', p:leader, base:1},
+  guitar:{label:'Guitarist', p:guitar, base:1},
+  keys:{label:'Pianist', p:keysP, base:.95},
+  drums:{label:'Drummer', p:drums, base:1.05},
+  choir:{label:'Choir', c:new T.Vector3(0,3.3,-10.8), w:21, say:'the choir loft, wide'},
+  center:{label:'Center screen', c:new T.Vector3(0,7.75,-15), w:6.7, say:'the center screen'},
+  screens:{label:'Screens', c:new T.Vector3(0,7.75,-15), w:21.4, say:'all three screens'},
+  stage:{label:'Full stage', c:new T.Vector3(0,4,-5), w:33, say:'a wide of the full stage'},
+};
+/* Composition rules: eyes on the upper third (headroom), subject on the opposite third
+   from where they look (look room) or where they walk (walking/lead room). */
+const EYE = 1.64, HEADTOP = 1.76;
+const GAP = {CU:.02, MCU:.04, MS:.05, COWBOY:.045, FS:.045};
+function camRight(at){ const f = at.clone().sub(CAMS[ci].pos); f.y = 0; f.normalize(); return new T.Vector3(-f.z, 0, f.x); }
+function rawLead(sk){
+  const s = SUBJ[sk], g = s.p, r = camRight(g.position);
+  if (sk==='pastor' && P.v>.15) return {v:clamp((P.vx*r.x+P.vz*r.z)/.4,-1,1), walk:true};
+  const ry = g.rotation.y, lat = Math.sin(ry)*r.x + Math.cos(ry)*r.z;
+  if (Math.abs(lat)<.15) return {v:0, walk:false};
+  return {v:Math.sign(lat)*Math.min(1,(Math.abs(lat)-.15)*1.8), walk:false};
+}
+const leadS = {};
+function updateLeads(dt, snap){
+  for (const k in SUBJ) if (SUBJ[k].p) { const r = rawLead(k); const cur = leadS[k] || {v:0, walk:false};
+    cur.v = snap ? r.v : cur.v + (r.v-cur.v)*(1-Math.exp(-dt*1.6)); cur.walk = r.walk; leadS[k] = cur; }
+}
+function spec(sk, zk){
+  const s = SUBJ[sk];
+  if (s.p) {
+    const z = SIZES[zk], p = s.p.position;
+    // tight broadcast headroom: a small gap above the head (a close-up trims the top slightly)
+    const top = s.base + HEADTOP + GAP[zk]*z.h, cy = top - z.h/2;
+    const c = new T.Vector3(p.x, cy, p.z);
+    const L = leadS[sk] || {v:0, walk:false};
+    const lead = Math.abs(L.v)<.05 ? 0 : L.v;
+    if (lead) c.addScaledVector(camRight(c), lead * (z.h*16/9)/6);  // push subject toward the back third
+    return {center:c, h:z.h, lead, walk:L.walk, person:true, eye:new T.Vector3(p.x, s.base+EYE, p.z), eyeFrac:(top-(s.base+EYE))/z.h};
+  }
+  return {center:s.c.clone(), h:s.w/(16/9), lead:0, person:false};
+}
+function hintFor(sp, ev){
+  if (ev.e<.07 && ev.s<.16) return 'Good framing. Hold it.';
+  const opts = [];
+  opts.push([ev.s/.16, ev.sz<0 ? 'Too loose. Zoom in.' : 'Too tight. Zoom out.']);
+  const panR = ev.hN>0; let ht = panR ? 'Pan right.' : 'Pan left.';
+  if (sp.lead) ht = ((panR&&sp.lead>0)||(!panR&&sp.lead<0)) ? (sp.walk?'Needs walking room. ':'Needs look room. ')+ht : 'Too much space in front. '+ht;
+  opts.push([Math.abs(ev.hN)/.07, ht]);
+  const down = ev.vN>0; let vt = down ? 'Tilt down.' : 'Tilt up.';
+  if (sp.person) vt = (down ? 'Too much headroom. ' : 'Not enough headroom. ')+vt;
+  opts.push([Math.abs(ev.vW)/.07, vt]);
+  opts.sort((a,b)=>b[0]-a[0]); return opts[0][1];
+}
+function evalFrame(sp){
+  const pos = CAMS[ci].pos, d = sp.center.clone().sub(pos), dist = d.length();
+  const ty = Math.atan2(-d.x,-d.z), tp = Math.atan2(d.y, Math.hypot(d.x,d.z));
+  const tz = clamp(Math.log(TANMAX/((sp.h/2)/dist)), 0, ZMAX);
+  const st = camState[ci], fr = fovOf(st.z)*D2R;
+  const hN = wrap(st.yaw-ty)*Math.cos(tp)/fr, vN = (st.pitch-tp)/fr;
+  // extra headroom is penalized harder than a slightly tight top
+  const vW = vN*(vN>0 ? 2.4 : 1.3);
+  const e = Math.hypot(hN, vW);
+  const s = Math.abs(st.z - tz);
+  const q = clamp(1-e/.3,0,1)*.6 + clamp(1-s/.7,0,1)*.4;
+  return {e, s, q, tz, hN, vN, vW, sz:st.z-tz};
+}
+
+/* ---------- free-mode selectors ---------- */
+const subjSel = $('#subjSel'), sizeSel = $('#sizeSel');
+subjSel.innerHTML = '<option value="none">No target</option>' + Object.entries(SUBJ).map(([k,v])=>'<option value="'+k+'">'+v.label+'</option>').join('');
+subjSel.value = 'pastor';
+function fillSizes(){ const s = SUBJ[subjSel.value]; const keep = sizeSel.value;
+  const opts = !s ? [] : s.p ? ['CU','MCU','MS','COWBOY','FS'] : ['WIDE'];
+  sizeSel.innerHTML = opts.map(k=>'<option value="'+k+'">'+SIZES[k].name+'</option>').join('');
+  sizeSel.disabled = !opts.length; if (opts.includes(keep)) sizeSel.value = keep; else if (opts.includes('MCU')) sizeSel.value='MCU'; }
+subjSel.onchange = fillSizes; fillSizes();
+
+/* ---------- input ---------- */
+const keys = new Set();
+addEventListener('keydown', e=>{
+  if (e.target.closest && e.target.closest('input,select,textarea')) return;
+  const k = e.key.toLowerCase();
+  if (['arrowleft','arrowright','arrowup','arrowdown',' '].includes(k)) e.preventDefault();
+  if (k==='1'||k==='2'||k==='3') { setCam(+k-1); return; }
+  keys.add(k);
+});
+addEventListener('keyup', e=>{ keys.delete(e.key.toLowerCase()); if (e.key==='Shift') keys.delete('shift'); });
+addEventListener('blur', ()=>keys.clear());
+
+let drag = null, wheelV = 0;
+// Mouse: click once to grab the virtual joystick, move freely, click again (or Esc) to release.
+// Touch/pen: press and drag as before.
+function dragMove(e){ const r=mon.getBoundingClientRect(); drag.x=e.clientX-r.left; drag.y=e.clientY-r.top; const R=r.height*.32;
+  let vx=(drag.x-drag.x0)/R, vy=(drag.y-drag.y0)/R; let m=Math.hypot(vx,vy);
+  if (m<.06) { vx=vy=0; } else { const k=(Math.min(m,1)-.06)/.94/m; vx*=k; vy*=k; }
+  drag.vx=vx; drag.vy=vy; }
+mon.addEventListener('pointerdown', e=>{
+  const r=mon.getBoundingClientRect();
+  if (e.pointerType==='mouse') { if (e.button!==0) return; if (drag && drag.latched) { drag=null; return; }
+    drag={id:e.pointerId, latched:true, x0:e.clientX-r.left, y0:e.clientY-r.top, x:e.clientX-r.left, y:e.clientY-r.top, vx:0, vy:0}; return; }
+  try{mon.setPointerCapture(e.pointerId);}catch(_){}
+  drag={id:e.pointerId, latched:false, x0:e.clientX-r.left, y0:e.clientY-r.top, x:e.clientX-r.left, y:e.clientY-r.top, vx:0, vy:0}; });
+addEventListener('pointermove', e=>{ if(!drag||e.pointerId!==drag.id) return; dragMove(e); });
+addEventListener('keydown', e=>{ if (e.key==='Escape' && drag && drag.latched) drag=null; });
+const endDrag = e=>{ if(drag&&!drag.latched&&e.pointerId===drag.id) drag=null; };
+mon.addEventListener('pointerup', endDrag); mon.addEventListener('pointercancel', endDrag);
+mon.addEventListener('wheel', e=>{ if (!$('#wheelzoom').checked) return; e.preventDefault(); wheelV = clamp(wheelV - Math.sign(e.deltaY)*.3, -1, 1); }, {passive:false});
+
+function makePad(el, obj, yOnly){
+  const knob = el.querySelector('.knob');
+  const move = e=>{ const r=el.getBoundingClientRect(); const R=(yOnly? r.height/2-26 : r.width/2-24); let dx=yOnly?0:(e.clientX-(r.left+r.width/2))/R, dy=(e.clientY-(r.top+r.height/2))/R; const m=Math.hypot(dx,dy); if(m>1){dx/=m;dy/=m;} obj.x=dx; obj.y=dy; knob.style.transform='translate('+dx*R+'px,'+dy*R+'px)'; };
+  el.addEventListener('pointerdown', e=>{ try{el.setPointerCapture(e.pointerId);}catch(_){} obj.active=true; move(e); });
+  el.addEventListener('pointermove', e=>{ if(obj.active) move(e); });
+  const end=()=>{ obj.active=false; obj.x=obj.y=0; knob.style.transform=''; };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+}
+const joy = {active:false,x:0,y:0}, rock = {active:false,x:0,y:0};
+makePad($('#stick'), joy, false); makePad($('#rocker'), rock, true);
+
+function padInput(){
+  try { const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (const p of pads) { if (!p || !p.connected) continue;
+      const dz = v => Math.abs(v)<.12 ? 0 : (v-Math.sign(v)*.12)/.88;
+      let z = dz(-(p.axes[3]||0)) + ((p.buttons[7]&&p.buttons[7].value)||0) - ((p.buttons[6]&&p.buttons[6].value)||0);
+      return {x:dz(p.axes[0]||0), y:dz(-(p.axes[1]||0)), z};
+    } } catch(_){}
+  return null;
+}
+const curve = v => Math.sign(v)*Math.pow(Math.abs(v),1.7);
+function readInput(){
+  let x=0,y=0,z=0;
+  const fine = keys.has('shift') ? .3 : 1;
+  if (keys.has('arrowleft')||keys.has('a')) x-=1;
+  if (keys.has('arrowright')||keys.has('d')) x+=1;
+  if (keys.has('arrowup')||keys.has('w')) y+=1;
+  if (keys.has('arrowdown')||keys.has('s')) y-=1;
+  if (keys.has('i')||keys.has('e')||keys.has('=')||keys.has('+')) z+=1;
+  if (keys.has('o')||keys.has('q')||keys.has('-')||keys.has('_')) z-=1;
+  x*=fine; y*=fine; z*=fine;
+  if (drag) { x+=curve(drag.vx); y+=curve(-drag.vy); }
+  if (joy.active) { x+=curve(joy.x); y+=curve(-joy.y); }
+  if (rock.active) z+=curve(-rock.y);
+  z += wheelV;
+  const gp = padInput(); if (gp) { x+=curve(gp.x); y+=curve(gp.y); z+=curve(clamp(gp.z,-1,1)); }
+  if ($('#inv').checked) y = -y;
+  return {x:clamp(x,-1,1), y:clamp(y,-1,1), z:clamp(z,-1,1)};
+}
+
+/* ---------- presets ---------- */
+let storing = false;
+const storeBtn = $('#storeBtn'), presetNote = $('#presetNote');
+storeBtn.onclick = ()=>{ storing=!storing; storeBtn.setAttribute('aria-pressed', storing); presetNote.textContent = storing ? 'Tap a slot to save this shot' : 'Per camera'; };
+function refreshPresetBtns(){ document.querySelectorAll('#presetSeg [data-p]').forEach(b=>{ b.style.opacity = presets[ci][+b.dataset.p] ? 1 : .5; }); }
+function goTo(to){ const st=camState[ci]; const from={yaw:st.yaw,pitch:st.pitch,z:st.z};
+  const ang=Math.hypot(wrap(to.yaw-from.yaw), to.pitch-from.pitch)*R2D;
+  anim={from,to,t:0,dur:clamp(.9+ang/35+Math.abs(to.z-from.z)*.45, 1, 3.5)}; st.vp=st.vt=st.vz=0; }
+document.querySelectorAll('#presetSeg [data-p]').forEach(b=> b.onclick = ()=>{
+  const i=+b.dataset.p, st=camState[ci];
+  if (storing) { presets[ci][i]={yaw:st.yaw,pitch:st.pitch,z:st.z}; storing=false; storeBtn.setAttribute('aria-pressed',false); presetNote.textContent='Saved P'+(i+1)+' on CAM '+CAMS[ci].n; refreshPresetBtns(); return; }
+  if (!presets[ci][i]) { presetNote.textContent='P'+(i+1)+' is empty. Press Store, then the slot.'; return; }
+  goTo(presets[ci][i]);
+});
+$('#homeBtn').onclick = ()=>goTo(home[ci]);
+refreshPresetBtns();
+
+/* ---------- modes & drills ---------- */
+let mode = 'free';
+const DESC = {
+  free:'Pick a subject and shot size, then frame it. The dashed box shows the correct composition, with tight headroom and look room on the side the subject faces. Fill the box and line up the corners.',
+  calls:'The director calls 8 shots. Frame each one and hold it steady until you get the take. Fast, clean framing with few corrections scores highest.',
+  tracking:'The pastor paces the stage for 60 seconds. Keep him in a medium close-up with walking room ahead of him when he moves and look room when he stops and turns to a section.'
+};
+const POOL = [['pastor','CU'],['pastor','MCU'],['pastor','MS'],['pastor','FS'],['pastor','COWBOY'],['pastor','COWBOY'],['leader','MCU'],['leader','MS'],['leader','COWBOY'],['guitar','COWBOY'],['leader','FS'],['guitar','MS'],['guitar','MCU'],['keys','MS'],['keys','MCU'],['drums','MS'],['choir','WIDE'],['center','WIDE'],['screens','WIDE'],['stage','WIDE']];
+const calls = {active:false, phase:'idle', i:0, cur:null, t0:0, hold:0, moves:0, results:[], takeUntil:0};
+const track = {active:false, t:0, on:0, qSum:0, moves:0, dur:60, done:null};
+let wasMoving = false, now = 0;
+
+function callText(c){ const s=SUBJ[c[0]]; const who = s.p ? SIZES[c[1]].say+' on the '+s.label.toLowerCase() : s.say; return 'Camera '+CAMS[ci].n+', give me '+who+'.'; }
+function nextCall(){
+  let c; do { c = POOL[Math.floor(Math.random()*POOL.length)]; } while (calls.cur && c[0]===calls.cur[0]);
+  calls.cur=c; calls.phase='framing'; calls.t0=now; calls.hold=0; calls.moves=0;
+  if (c[0]==='pastor') { P.look = LOOKS[Math.floor(Math.random()*LOOKS.length)]; }
+  $('#callTag').textContent='Shot '+(calls.i+1)+' / 8'; $('#callTxt').textContent=callText(c);
+}
+function grade(s){ return s>=90?'A':s>=80?'B':s>=70?'C':s>=60?'D':'Keep practicing'; }
+
+function setMode(m){
+  stopDrills(); mode=m;
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.mode===m));
+  $('#modeDesc').textContent = DESC[m];
+  $('#freeOpts').hidden = m!=='free';
+  $('#startBtn').hidden = m==='free';
+  $('#stats').hidden = m==='free';
+  $('#results').innerHTML='';
+  $('#callChip').hidden = true;
+  if (m==='free') { $('#callTag').textContent='Practice'; $('#callTxt').textContent='Click in the monitor, then move the mouse to pan and tilt. Click again to release. Use I and O to zoom.'; }
+  if (m==='calls') { $('#callTag').textContent='Director'; $('#callTxt').textContent='Press Start round when you are ready for the first call.'; }
+  if (m==='tracking') { $('#callTag').textContent='Director'; $('#callTxt').textContent='Press Start round. Stay with the pastor in a medium close-up.'; }
+  renderStats();
+}
+document.querySelectorAll('#modeSeg button').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+function stopDrills(){ calls.active=false; calls.phase='idle'; track.active=false; updateStartBtn(); setTally('iso'); $('#roTime').hidden=true; }
+function updateStartBtn(){ const b=$('#startBtn'); const on = calls.active||track.active; b.textContent = on ? 'Stop' : 'Start round'; b.classList.toggle('stop', on); }
+$('#startBtn').onclick = ()=>{
+  if (calls.active||track.active) { stopDrills(); setMode(mode); return; }
+  $('#results').innerHTML='';
+  if (mode==='calls') { Object.assign(calls,{active:true,i:0,results:[],cur:null}); nextCall(); setTally('pvw'); }
+  if (mode==='tracking') { Object.assign(track,{active:true,t:0,on:0,qSum:0,moves:0,done:null}); setTally('pgm'); $('#callTxt').textContent='Camera '+CAMS[ci].n+', stay with the pastor. Medium close-up.'; $('#roTime').hidden=false; }
+  updateStartBtn(); renderStats();
+};
+function setTally(s){ const t=$('#tally'); t.dataset.s=s; $('#tallyState').textContent = s==='pgm'?'PGM':s==='pvw'?'PVW':'ISO'; }
+function flash(){ const f=$('#flash'); f.classList.add('on'); setTimeout(()=>f.classList.remove('on'), 350); }
+
+function renderStats(){
+  const st = $('#stats');
+  if (mode==='calls') {
+    const r = calls.results, avg = r.length ? Math.round(r.reduce((a,b)=>a+b.score,0)/r.length) : null;
+    const avgT = r.length ? (r.reduce((a,b)=>a+b.t,0)/r.length).toFixed(1)+'s' : '—';
+    st.innerHTML = '<div class="stat"><b>'+(calls.active?Math.min(calls.i+1,8):r.length)+'/8</b><span>Shot</span></div><div class="stat"><b>'+(avg??'—')+'</b><span>Avg score</span></div><div class="stat"><b>'+avgT+'</b><span>Avg time</span></div>';
+    if (r.length) $('#results').innerHTML = '<table><thead><tr><th>Shot</th><th class="n">Time</th><th class="n">Moves</th><th class="n">Score</th></tr></thead><tbody>'+r.map(x=>'<tr><td>'+x.name+'</td><td class="n">'+x.t.toFixed(1)+'s</td><td class="n">'+x.moves+'</td><td class="n">'+x.score+'</td></tr>').join('')+'</tbody></table>'+(!calls.active && r.length===8 ? '<p class="note" style="margin-top:8px">Round grade: <b style="color:var(--fg)">'+grade(avg)+'</b>. Score drops after 4 seconds and after 2 corrections.</p>' : '');
+  } else if (mode==='tracking') {
+    const pct = track.t>0 ? Math.round(track.on/track.t*100) : 0, aq = track.t>0 ? Math.round(track.qSum/track.t*100) : 0;
+    st.innerHTML = '<div class="stat"><b>'+pct+'%</b><span>On shot</span></div><div class="stat"><b>'+(track.t>0?aq+'%':'—')+'</b><span>Framing</span></div><div class="stat"><b>'+track.moves+'</b><span>Moves</span></div>';
+    if (track.done) $('#results').innerHTML = '<p class="note">Round complete. On shot '+track.done.pct+'% of the time with '+track.done.moves+' moves. Grade: <b style="color:var(--fg)">'+grade(track.done.pct)+'</b>.</p>';
+  }
+}
+
+/* ---------- pastor movement ---------- */
+const P = {x:0, z:-.65, tx:0, tz:-.65, max:.8, v:0, vx:0, vz:0, wait:2, face:0, look:0};
+const LOOKS = [-.75,-.4,0,.4,.75];
+function updatePastor(dt, wander){
+  if (!wander) { P.tx=0; P.tz=-.65; P.max=.725; }
+  const dx=P.tx-P.x, dz=P.tz-P.z, d=Math.hypot(dx,dz);
+  let faceT = 0;
+  if (d>.02) {
+    const want = Math.min(P.max*(+$('#pspeed').value/100), d*1.4);
+    P.v += (want-P.v)*(1-Math.exp(-dt*3));
+    const stp = Math.min(d, P.v*dt); P.x += dx/d*stp; P.z += dz/d*stp;
+    P.vx = dx/d*P.v; P.vz = dz/d*P.v;
+    faceT = Math.atan2(dx,dz)*.55;
+  } else {
+    P.v = 0; P.vx = P.vz = 0; faceT = P.look;
+    if (wander) { P.wait -= dt; if (P.wait<=0) { let nx; do { nx = rand(-7,7); } while (Math.abs(nx-P.x)<1.5); P.tx=nx; P.tz=rand(-1.0,-.6); P.max=rand(.365,.875); P.wait=rand(1.5,4); P.look=LOOKS[Math.floor(Math.random()*LOOKS.length)]; } }
+  }
+  P.face += (faceT-P.face)*(1-Math.exp(-dt*4));
+  pastor.position.set(P.x, 1+Math.abs(Math.sin(now*6))*.025*Math.min(1,P.v), P.z);
+  pastor.rotation.y = P.face;
+}
+
+/* ---------- overlay ---------- */
+const ovc = $('#ov'), ox = ovc.getContext('2d');
+function resize(){ const r=mon.getBoundingClientRect(); if(!r.width) return; const dpr=Math.min(window.devicePixelRatio||1,2); renderer.setPixelRatio(dpr); renderer.setSize(r.width,r.height,false); ovc.width=Math.round(r.width*dpr); ovc.height=Math.round(r.height*dpr); cam.aspect=r.width/r.height; cam.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(mon); resize();
+
+function drawOverlay(sp, ev, ok){
+  const W=ovc.width, H=ovc.height, s=W/1000; ox.clearRect(0,0,W,H);
+  if ($('#grid').checked) {
+    ox.strokeStyle='rgba(255,255,255,.28)'; ox.lineWidth=Math.max(1,s);
+    ox.beginPath(); for (const f of [1/3,2/3]) { ox.moveTo(W*f,0); ox.lineTo(W*f,H); ox.moveTo(0,H*f); ox.lineTo(W,H*f); } ox.stroke();
+    ox.setLineDash([6*s,6*s]); ox.strokeStyle='rgba(255,255,255,.16)'; ox.strokeRect(W*.05,H*.05,W*.9,H*.9); ox.setLineDash([]);
+  }
+  ox.strokeStyle='rgba(255,255,255,.6)'; ox.lineWidth=Math.max(1,1.5*s); ox.beginPath();
+  ox.moveTo(W/2-12*s,H/2); ox.lineTo(W/2+12*s,H/2); ox.moveTo(W/2,H/2-12*s); ox.lineTo(W/2,H/2+12*s); ox.stroke();
+  if (sp && ev && $('#guide').checked) {
+    const p = sp.center.clone().project(cam);
+    if (p.z<1 && p.z>-1) {
+      const cx=(p.x+1)/2*W, cy=(1-p.y)/2*H;
+      const bh = H*(TANMAX/Math.exp(ev.tz))/Math.tan(cam.fov*D2R/2), bw = bh*16/9;
+      ox.strokeStyle = ok ? 'rgba(47,207,109,.95)' : 'rgba(233,162,59,.95)'; ox.lineWidth=Math.max(1.5,2*s);
+      ox.setLineDash([10*s,7*s]); ox.strokeRect(cx-bw/2,cy-bh/2,bw,bh); ox.setLineDash([]);
+      const L=Math.min(bw,bh)*.12; ox.lineWidth=Math.max(2,3*s); ox.beginPath();
+      for (const [sx,sy] of [[-1,-1],[1,-1],[-1,1],[1,1]]) { const x0=cx+sx*bw/2, y0=cy+sy*bh/2; ox.moveTo(x0,y0-sy*L); ox.lineTo(x0,y0); ox.lineTo(x0-sx*L,y0); }
+      ox.stroke();
+      if (sp.person) {
+        // where the eyes should sit in the target frame
+        const ey = cy-bh/2+bh*sp.eyeFrac; ox.setLineDash([3*s,5*s]); ox.lineWidth=Math.max(1,1.2*s);
+        ox.beginPath(); ox.moveTo(cx-bw/2,ey); ox.lineTo(cx+bw/2,ey); ox.stroke(); ox.setLineDash([]);
+        ox.font = (11*s*1.4)+'px "IBM Plex Mono",monospace'; ox.fillStyle = ox.strokeStyle;
+        const big = bh > 90*s;
+        if (big) ox.fillText('EYES', cx-bw/2+6*s, ey-5*s);
+        // look / walking room arrow from the subject toward open space
+        if (sp.lead) {
+          const pe = sp.eye.clone().project(cam);
+          if (pe.z<1 && pe.z>-1) {
+            const exx=(pe.x+1)/2*W, eyy=(1-pe.y)/2*H, dir=Math.sign(sp.lead), len=Math.min(bw*.22, 140*s);
+            const x1=exx+dir*bh*.12, x2=x1+dir*len;
+            ox.lineWidth=Math.max(2,2.5*s); ox.beginPath(); ox.moveTo(x1,eyy); ox.lineTo(x2,eyy);
+            ox.moveTo(x2-dir*9*s,eyy-7*s); ox.lineTo(x2,eyy); ox.lineTo(x2-dir*9*s,eyy+7*s); ox.stroke();
+            ox.textAlign = dir>0 ? 'left' : 'right'; if (big) ox.fillText(sp.walk?'WALK ROOM':'LOOK ROOM', x2+dir*6*s, eyy+4*s); ox.textAlign='left';
+          }
+        }
+      }
+    }
+  }
+  if (drag) { ox.strokeStyle='rgba(233,162,59,.8)'; ox.lineWidth=Math.max(1.5,2*s); const dpr=W/mon.clientWidth;
+    ox.beginPath(); ox.arc(drag.x0*dpr,drag.y0*dpr,5*s,0,Math.PI*2); ox.moveTo(drag.x0*dpr,drag.y0*dpr); ox.lineTo(drag.x*dpr,drag.y*dpr); ox.stroke();
+    ox.beginPath(); ox.arc(drag.x0*dpr,drag.y0*dpr,H*.32*.06,0,Math.PI*2); ox.setLineDash([3*s,4*s]); ox.stroke(); ox.setLineDash([]);
+    if (drag.latched) { ox.font=(11*s*1.4)+'px "IBM Plex Mono",monospace'; ox.fillStyle='rgba(233,162,59,.95)'; ox.fillText('JOYSTICK ON · CLICK OR ESC TO RELEASE', drag.x0*dpr+10*s, drag.y0*dpr-10*s); } }
+}
+
+/* ---------- main loop ---------- */
+let last = performance.now(), uiT = 0;
+function frame(t){
+  const dt = Math.min(.05,(t-last)/1000); last=t; now+=dt;
+  const st = camState[ci], inp = readInput();
+  wheelV *= Math.exp(-dt*7); if (Math.abs(wheelV)<.01) wheelV=0;
+  const mag = Math.abs(inp.x)+Math.abs(inp.y)+Math.abs(inp.z);
+  if (anim && mag>.05) anim=null;
+  const moving = mag>.06;
+  if (moving && !wasMoving) { if (calls.active && calls.phase==='framing') calls.moves++; if (track.active) track.moves++; }
+  wasMoving = moving;
+
+  const speed = +$('#speed').value/100;
+  const kResp = {smooth:3.2, standard:7, snappy:16}[$('#resp').value];
+  const zf = $('#zscale').checked ? Math.max(1/Math.exp(st.z), .045) : 1;
+  const maxPan = 55*speed*zf, maxZoom = 1.1*speed, a = 1-Math.exp(-kResp*dt);
+  st.vp += (inp.x*maxPan - st.vp)*a; st.vt += (inp.y*maxPan - st.vt)*a; st.vz += (inp.z*maxZoom - st.vz)*a;
+  if (anim) {
+    anim.t += dt; const u = clamp(anim.t/anim.dur,0,1), e = u*u*(3-2*u);
+    st.yaw = anim.from.yaw + wrap(anim.to.yaw-anim.from.yaw)*e; st.pitch = anim.from.pitch+(anim.to.pitch-anim.from.pitch)*e; st.z = anim.from.z+(anim.to.z-anim.from.z)*e;
+    st.vp=st.vt=st.vz=0; if (u>=1) anim=null;
+  } else { st.yaw -= st.vp*D2R*dt; st.pitch += st.vt*D2R*dt; st.z += st.vz*dt; }
+  st.pitch = clamp(st.pitch, -55*D2R, 40*D2R);
+  if (st.z<0) { st.z=0; st.vz=Math.max(0,st.vz); } if (st.z>ZMAX) { st.z=ZMAX; st.vz=Math.min(0,st.vz); }
+  cam.position.copy(CAMS[ci].pos); cam.rotation.set(st.pitch, st.yaw, 0); cam.fov = fovOf(st.z); cam.updateProjectionMatrix();
+
+  updatePastor(dt, mode==='tracking' || (mode==='free' && $('#walk').checked));
+  leader.rotation.y = Math.sin(now*.9)*.15;
+  guitar.rotation.y = -.25+Math.sin(now*1.3)*.06;
+  updateLeads(dt, false);
+
+  // current target
+  let sp = null;
+  if (mode==='free' && subjSel.value!=='none') sp = spec(subjSel.value, sizeSel.value);
+  if (mode==='calls' && calls.active && calls.cur) sp = spec(calls.cur[0], calls.cur[1]);
+  if (mode==='tracking') sp = spec('pastor','MCU');
+  const ev = sp ? evalFrame(sp) : null;
+  const settled = (Math.abs(st.vp)+Math.abs(st.vt))/cam.fov < .25 && Math.abs(st.vz) < .08;
+  const ok = ev && ev.e<.07 && ev.s<.16;
+
+  if (calls.active) {
+    if (calls.phase==='framing') {
+      calls.hold = (ok && settled) ? calls.hold+dt : 0;
+      if (calls.hold>=.8) {
+        const tt = now-calls.t0-.8;
+        const base = clamp(100 - Math.max(0,tt-4)*3 - Math.max(0,calls.moves-2)*5, 20, 100);
+        const score = Math.round(base*(.75+.25*ev.q));
+        const c = calls.cur, s = SUBJ[c[0]];
+        calls.results.push({name:(s.p?c[1]+' ':'')+s.label, t:Math.max(0,tt), moves:calls.moves, score});
+        calls.phase='take'; calls.takeUntil=now+1.6; setTally('pgm'); flash();
+        $('#callTxt').textContent='Take! Nice. '+score+' points.'; renderStats();
+      }
+    } else if (calls.phase==='take' && now>=calls.takeUntil) {
+      calls.i++;
+      if (calls.i>=8) { calls.active=false; calls.phase='idle'; setTally('iso'); updateStartBtn();
+        const avg=Math.round(calls.results.reduce((a,b)=>a+b.score,0)/8);
+        $('#callTag').textContent='Round done'; $('#callTxt').textContent='Round complete. Average score '+avg+' · grade '+grade(avg)+'.'; $('#callChip').hidden=true; renderStats();
+        saveRun('calls', {score:avg, grade:grade(avg), cam:CAMS[ci].n, t:Date.now()}); }
+      else { setTally('pvw'); nextCall(); renderStats(); }
+    }
+  }
+  if (track.active) {
+    track.t += dt;
+    if (ev) { if (ev.e<.12 && ev.s<.25) track.on += dt; track.qSum += ev.q*dt; }
+    if (track.t>=track.dur) { track.active=false; setTally('iso'); updateStartBtn();
+      track.done = {pct:Math.round(track.on/track.t*100), moves:track.moves};
+      $('#callTag').textContent='Round done'; $('#callTxt').textContent='Clear. You held the shot '+track.done.pct+'% of the time.'; $('#roTime').hidden=true; renderStats();
+      saveRun('tracking', {score:track.done.pct, moves:track.done.moves, cam:CAMS[ci].n, pastorSpeed:+$('#pspeed').value, t:Date.now()}); }
+  }
+
+  renderer.render(scene, cam);
+  drawOverlay(sp, ev, ok);
+
+  uiT += dt;
+  if (uiT>.08) { uiT=0;
+    const zx = Math.exp(st.z);
+    $('#roZoom').textContent = 'ZOOM '+zx.toFixed(1)+'×  '+cam.fov.toFixed(1)+'°';
+    $('#roPT').textContent = 'PAN '+(-wrap(st.yaw-home[ci].yaw)*R2D).toFixed(1)+'°  TILT '+(st.pitch*R2D).toFixed(1)+'°';
+    const mf = $('#meterFill');
+    if (ev) { mf.style.width = Math.round(ev.q*100)+'%'; mf.classList.toggle('ok', !!ok); $('#meterVal').textContent = Math.round(ev.q*100)+'%'; $('#meter').hidden=false; }
+    else $('#meter').hidden = true;
+    const hint = $('#hint');
+    if (ev && $('#coach').checked && !(calls.active && calls.phase==='take')) { hint.hidden=false; hint.textContent = hintFor(sp, ev); hint.classList.toggle('ok', !!ok); }
+    else hint.hidden = true;
+    const chip = $('#callChip');
+    if (calls.active) {
+      chip.hidden=false; chip.classList.toggle('take', calls.phase==='take');
+      chip.innerHTML = calls.phase==='take' ? 'TAKE' : (ok ? (settled?'Hold steady':'Settle…')+'<span class="hold"><i style="width:'+Math.round(calls.hold/.8*100)+'%"></i></span>' : (now-calls.t0).toFixed(1)+'s · '+calls.moves+' moves');
+    } else if (track.active) {
+      chip.hidden=false; chip.classList.remove('take'); chip.textContent = (ev && ev.e<.12 && ev.s<.25) ? 'On shot' : 'Off shot';
+      $('#roTime').textContent = 'LIVE '+Math.max(0,track.dur-track.t).toFixed(0)+'s';
+    } else if (mode==='free') chip.hidden = true;
+    if (track.active) renderStats();
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ---------- standalone: local scores + feedback link ---------- */
+// Paste your Microsoft Forms share link between the quotes to turn on the feedback button.
+const FEEDBACK_FORM_URL = "";
+
+function status(msg, warn){ const el=$('#appStatus'); el.textContent=msg||''; el.classList.toggle('warn', !!warn); }
+const SKEY = 'camTrainerScores.v1';
+function loadScores(){ try { return JSON.parse(localStorage.getItem(SKEY)) || {}; } catch(_) { return {}; } }
+function storeScores(v){ try { localStorage.setItem(SKEY, JSON.stringify(v)); return true; } catch(_) { return false; } }
+function saveRun(kind, run){
+  const cur = loadScores(); const m = cur[kind] || {best:null, runs:[]};
+  m.runs = [run].concat(m.runs||[]).slice(0,20);
+  const isBest = typeof m.best!=='number' || run.score>m.best;
+  m.best = Math.max(typeof m.best==='number' ? m.best : -1, run.score);
+  cur[kind]=m;
+  if (storeScores(cur)) status(isBest ? 'New personal best!' : 'Round saved on this device.'); else status('This browser isn’t saving scores (private window?).', true);
+  renderBoard();
+}
+function renderBoard(){
+  const cur = loadScores(), el = $('#board');
+  const rows = [['Director calls','calls',''],['Tracking','tracking','%']].map(([label,k,u])=>{ const m=cur[k];
+    const last = m && m.runs && m.runs[0];
+    return '<tr><td>'+label+'</td><td class="n">'+(m&&typeof m.best==='number'? m.best+u : '—')+'</td><td class="n">'+(last? last.score+u : '—')+'</td><td class="n">'+(m&&m.runs? m.runs.length : 0)+'</td></tr>'; }).join('');
+  el.innerHTML = '<table><thead><tr><th>Drill</th><th class="n">Best</th><th class="n">Last</th><th class="n">Rounds</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+$('#resetScores').onclick = ()=>{ const b=$('#resetScores'); if (b.dataset.armed){ storeScores({}); renderBoard(); status('Scores reset.'); delete b.dataset.armed; b.textContent='Reset'; } else { b.dataset.armed='1'; b.textContent='Tap again to reset'; setTimeout(()=>{ delete b.dataset.armed; b.textContent='Reset'; }, 3000); } };
+renderBoard();
+const fb = $('#fbLink');
+if (FEEDBACK_FORM_URL) fb.href = FEEDBACK_FORM_URL;
+else { fb.removeAttribute('href'); fb.setAttribute('aria-disabled','true'); fb.style.opacity=.5; $('#fbHint').textContent='Feedback form coming soon.'; }
+
+// full screen
+$('#fsBtn').onclick = ()=>{ try { const r = mon.requestFullscreen ? mon.requestFullscreen() : (mon.webkitRequestFullscreen ? mon.webkitRequestFullscreen() : null); if (r && r.catch) r.catch(()=>status('Full screen isn’t available here.', true)); } catch(_) { status('Full screen isn’t available here.', true); } };
+
+$('#pspeed').addEventListener('input', e=>{ $('#pspeedVal').textContent = e.target.value+'%'; });
+setMode('free');
+setCam(1);
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
