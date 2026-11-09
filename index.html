@@ -86,9 +86,9 @@ a.btn{text-decoration:none;justify-content:center}
 .chip.take{background:#5a120e;border-color:var(--tally);color:#fff}
 .touchpad{display:none;justify-content:space-between;align-items:center;gap:16px;padding:6px 4px}
 @media (hover:none) and (pointer:coarse){.touchpad{display:flex}}
-.stick{position:relative;width:136px;height:136px;border-radius:50%;background:radial-gradient(circle,#1f262f 0,#141920 70%);border:1px solid var(--line);touch-action:none}
+.stick{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:contain;position:relative;width:136px;height:136px;border-radius:50%;background:radial-gradient(circle,#1f262f 0,#141920 70%);border:1px solid var(--line);touch-action:none}
 .stick .knob{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:#2c343f;border:2px solid #49535f;box-shadow:0 4px 10px rgba(0,0,0,.5)}
-.rocker{position:relative;width:64px;height:150px;border-radius:32px;background:#141920;border:1px solid var(--line);touch-action:none}
+.rocker{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;position:relative;width:64px;height:150px;border-radius:32px;background:#141920;border:1px solid var(--line);touch-action:none}
 .rocker .knob{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:#2c343f;border:2px solid #49535f}
 .rocker span{position:absolute;left:0;right:0;text-align:center;font:700 12px var(--f-disp);color:var(--muted);letter-spacing:.1em}
 .rocker .t{top:8px}.rocker .w{bottom:8px}
@@ -677,9 +677,10 @@ subjSel.onchange = fillSizes; fillSizes();
 /* ---------- input ---------- */
 const keys = new Set();
 addEventListener('keydown', e=>{
-  if (e.target.closest && e.target.closest('input,select,textarea')) return;
+  const tg = e.target;
+  if (tg && tg.matches && (tg.matches('textarea,select,input[type=range],input[type=text]') || tg.isContentEditable)) return;
   const k = e.key.toLowerCase();
-  if (['arrowleft','arrowright','arrowup','arrowdown',' '].includes(k)) e.preventDefault();
+  if (['arrowleft','arrowright','arrowup','arrowdown',' ','pageup','pagedown'].includes(k)) e.preventDefault();
   if (k==='1'||k==='2'||k==='3') { setCam(+k-1); return; }
   keys.add(k);
 });
@@ -714,6 +715,10 @@ function makePad(el, obj, yOnly){
   el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
 }
 const joy = {active:false,x:0,y:0}, rock = {active:false,x:0,y:0};
+// Stop the page from scrolling while a finger is steering the camera (iOS ignores touch-action alone).
+const stopScroll = e=>{ if (joy.active || rock.active || (drag && !drag.latched)) e.preventDefault(); };
+document.addEventListener('touchmove', stopScroll, {passive:false});
+['#monitor','#stick','#rocker'].forEach(sel=>{ const el=$(sel); el.addEventListener('touchstart', e=>e.preventDefault(), {passive:false}); el.addEventListener('touchmove', e=>e.preventDefault(), {passive:false}); });
 makePad($('#stick'), joy, false); makePad($('#rocker'), rock, true);
 
 function padInput(){
